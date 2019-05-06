@@ -10,17 +10,6 @@ class MLP:
         self.learning_rate = learning_rate
         self.delta_error = delta_error
     
-    def train_test_split(self, dataset, train_size):
-        lenght = dataset.X.shape[0]
-        x_train = dataset.X[0:int(train_size*lenght), :]
-        y_train = dataset.Y[0:int(train_size*lenght), :]
-        x_test = dataset.X[int(train_size*lenght):, :]
-        y_test = dataset.Y[int(train_size*lenght):, :]
-        dataset = namedtuple('datset', 'X Y')
-        train = dataset(X=x_train, Y=y_train)
-        test = dataset(X=x_test, Y=y_test)
-        return train, test
-
     def sigmoid(self, x):
         return 1/(1+np.exp(-x))
        
@@ -44,7 +33,8 @@ class MLP:
 
         return f_net_o, f_net_h
 
-    def backward(self, dataset, j, hidden_weights, output_weights, f_net_o, f_net_h, eta, hidden_units, momentum_h, momentum_o, n_classes):
+    def backward(self, dataset, j, hidden_weights, output_weights, f_net_o, 
+    	f_net_h, eta, hidden_units, momentum_h, momentum_o, n_classes):
         x = dataset.X[j,:]
         y = dataset.Y[j,:]
         error = y - f_net_o
@@ -85,14 +75,12 @@ class MLP:
 
         return hidden_weights, output_weights, error, momentum_h, momentum_o
 
-    def fit(self, dataset, train_size, verbose=False):
+    def fit(self, dataset, train, input_knots, verbose=False):
         hidden_units = self.hidden_units
         n_classes = self.n_classes
         learning_rate = self.learning_rate
         delta_error = self.delta_error
-        
-        # Train-Test Split
-        train, test = self.train_test_split(dataset, train_size)
+
 
         # Inicializando as camadas
         hidden_layers = len(hidden_units)
@@ -102,7 +90,7 @@ class MLP:
 
         for i in range(hidden_layers):
             if i==0:
-                aux = np.zeros((hidden_units[i], dataset.X.shape[1] + 1))
+                aux = np.zeros((hidden_units[i], input_knots + 1))
             else:
                 aux = np.zeros((hidden_units[i], hidden_units[i-1] + 1))
             hidden_weights.append(aux)
@@ -112,7 +100,7 @@ class MLP:
         for i in range(hidden_layers):
             for j in range(hidden_units[i]):
                 if i==0:
-                    for k in range(dataset.X.shape[1] + 1):
+                    for k in range(input_knots + 1):
                         hidden_weights[i][j][k] = random.uniform(-1, 1)
                 else:
                     for k in range(hidden_units[i-1]+1):
@@ -150,21 +138,19 @@ class MLP:
         self.hidden_weights = hidden_weights
         self.output_weights = output_weights
         self.train = train
-        self.test = test
+        #self.test = test
 
 
 
     def predict(self, X):
-        train = self.train
-        test = self.test
         hidden_weights = self.hidden_weights
         output_weights = self.output_weights
         y_hat, _ = self.forward(X, hidden_weights, output_weights)
         return np.argmax(y_hat)
     
-    def score(self):
-        train = self.train
-        test = self.test
+
+    def score(self, test=None):
+        test = test if test else self.test
         counter = 0
         for i in range(test.X.shape[0]):
             y_hat = self.predict(test.X[i,:])
